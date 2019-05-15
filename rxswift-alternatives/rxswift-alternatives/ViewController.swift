@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import RxSwift
+import RxCocoa
 
 class ViewController: UIViewController {
 
@@ -35,12 +37,12 @@ class ViewController: UIViewController {
         button.setTitle("Login", for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setTitleColor(.blue, for: .normal)
-        button.addTarget(self, action: #selector(loginPressed), for: .primaryActionTriggered)
         return button
     }()
 
     // MARK: - Properties
-    let viewModel: ViewModel
+    private let viewModel: ViewModel
+    private let disposeBag = DisposeBag()
 
     init(viewModel: ViewModel = ViewModel()) {
         self.viewModel = viewModel
@@ -73,18 +75,29 @@ extension ViewController {
             button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             button.topAnchor.constraint(equalTo: password.bottomAnchor, constant: 16)
             ])
+        setupBindings()
+        
+    }
+
+    private func setupBindings() {
+        button.rx.tap
+            .withLatestFrom(Observable.combineLatest(username.rx.text, password.rx.text))
+            .do(onNext: { [weak self] _ in self?.resignResponders() })
+            .flatMapLatest(viewModel.login)
+            .subscribe(onNext: { [weak self] result in
+                guard case let .failure(error) = result else { return }
+                self?.handle(error: error)
+            })
+            .disposed(by: disposeBag)
     }
 }
 
 // MARK: - Actions
 extension ViewController {
 
-    @objc
-    func loginPressed() {
-        viewModel.login(with: username.text, password: password.text) { result in
-            guard case let .failure(error) = result else { return }
-            handle(error: error)
-        }
+    private func resignResponders() {
+        username.resignFirstResponder()
+        password.resignFirstResponder()
     }
 
     func handle(error: ViewModel.LoginError) {

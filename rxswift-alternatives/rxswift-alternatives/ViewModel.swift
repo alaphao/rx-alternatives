@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import RxSwift
 
 struct ViewModel {
 
@@ -15,17 +16,16 @@ struct ViewModel {
     }
 
     func isValidEmail(email: String?) -> Bool {
-        return email?.contains("@@") ?? false
+        return email?.contains("@") ?? false
     }
     func isValidPassword(password: String?) -> Bool {
         return password?.isEmpty != true
     }
 
-    func login(with email: String?, password: String?, completion: (Result<Void, LoginError>) -> ()) {
+    func login(with email: String?, password: String?) -> Observable<Result<Void, LoginError>> {
         guard isValidEmail(email: email), isValidPassword(password: password) else {
-            completion(.failure(.wrongCredentials))
-            return
+            return .just(.failure(.wrongCredentials))
         }
-        completion(.success(()))
+        return .just(.success(()))
     }
 }
