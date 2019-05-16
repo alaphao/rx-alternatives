@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import RxSwift
+import RxCocoa
 
 class ViewController: UIViewController {
 
@@ -35,16 +37,18 @@ class ViewController: UIViewController {
         button.setTitle("Login", for: .normal)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setTitleColor(.blue, for: .normal)
-        button.addTarget(self, action: #selector(loginPressed), for: .primaryActionTriggered)
         return button
     }()
 
     // MARK: - Properties
-    let viewModel: ViewModel
+    private var viewModel: ViewModel!
+    private let disposeBag = DisposeBag()
 
-    init(viewModel: ViewModel = ViewModel()) {
-        self.viewModel = viewModel
+    init() {
         super.init(nibName: nil, bundle: nil)
+        self.viewModel = ViewModel(email: username.rx.text.asObservable(),
+                                   password: password.rx.text.asObservable(),
+                                   buttonTap: button.rx.tap.asObservable())
         commonInit()
     }
 
@@ -73,20 +77,24 @@ extension ViewController {
             button.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             button.topAnchor.constraint(equalTo: password.bottomAnchor, constant: 16)
             ])
+        setupBindings()
+    }
+
+    private func setupBindings() {
+        button.rx.tap
+            .subscribe(onNext: resignResponders)
+            .disposed(by: disposeBag)
+        viewModel.login
+            .subscribe(onNext: { [weak self] result in
+                guard case let .failure(error) = result else { return }
+                self?.handle(error: error)
+            })
+            .disposed(by: disposeBag)
     }
 }
 
 // MARK: - Actions
 extension ViewController {
-
-    @objc
-    func loginPressed() {
-        resignResponders()
-        viewModel.login(with: username.text, password: password.text) { result in
-            guard case let .failure(error) = result else { return }
-            handle(error: error)
-        }
-    }
 
     private func resignResponders() {
         username.resignFirstResponder()

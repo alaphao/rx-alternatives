@@ -7,6 +7,7 @@
 //
 
 import Foundation
+import RxSwift
 
 struct ViewModel {
 
@@ -14,6 +15,19 @@ struct ViewModel {
         case wrongCredentials
     }
 
+    // MARK: - Properties
+    // MARK: Inputs
+    let email: Observable<String?>
+    let password: Observable<String?>
+    let buttonTap: Observable<Void>
+
+    // MARK: Outputs
+    var login: Observable<Result<Void, LoginError>> {
+        return buttonTap
+            .withLatestFrom(Observable.combineLatest(email, password))
+            .flatMapLatest(login)
+    }
+    
     func isValidEmail(email: String?) -> Bool {
         return email?.contains("@") ?? false
     }
@@ -21,11 +35,10 @@ struct ViewModel {
         return password?.isEmpty != true
     }
 
-    func login(with email: String?, password: String?, completion: (Result<Void, LoginError>) -> ()) {
+    func login(with email: String?, password: String?) -> Observable<Result<Void, LoginError>> {
         guard isValidEmail(email: email), isValidPassword(password: password) else {
-            completion(.failure(.wrongCredentials))
-            return
+            return .just(.failure(.wrongCredentials))
         }
-        completion(.success(()))
+        return .just(.success(()))
     }
 }
