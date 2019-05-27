@@ -7,25 +7,33 @@
 //
 
 import Foundation
+import RxCocoa
 import RxSwift
 
+enum LoginError: Error {
+    case wrongCredentials
+}
+
 struct ViewModel {
-
-    enum LoginError: Error {
-        case wrongCredentials
+    private let activityIndicator = ActivityIndicator()
+    var isLoading: Driver<Bool> {
+        return activityIndicator.asDriver()
     }
 
-    func isValidEmail(email: String?) -> Bool {
-        return email?.contains("@") ?? false
-    }
-    func isValidPassword(password: String?) -> Bool {
-        return password?.isEmpty != true
+    let loginService: LoginService
+
+    func isValidEmail(email: String) -> Bool {
+        return email.contains("@")
     }
 
-    func login(with email: String?, password: String?) -> Observable<Result<Void, LoginError>> {
-        guard isValidEmail(email: email), isValidPassword(password: password) else {
-            return .just(.failure(.wrongCredentials))
-        }
-        return .just(.success(()))
+    func isValidPassword(password: String) -> Bool {
+        return !password.isEmpty
+    }
+
+    func login(with email: String, password: String) -> Observable<Result<String, LoginError>> {
+        return loginService
+            .login(email: email, password: password)
+            .trackActivity(activityIndicator)
+            .asObservable()
     }
 }
